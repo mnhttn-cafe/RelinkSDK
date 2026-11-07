@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RelinkSDK.Generator/RelinkSDK.Generator.csproj" />
+  <Project Path="RelinkSDK/RelinkSDK.csproj" />
+</Solution>
