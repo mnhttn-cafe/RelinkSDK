@@ -36,9 +36,7 @@ internal class BindingGenerator : IIncrementalGenerator
         foreach (var attribute in symbol.GetAttributes())
         {
             var inheritedFields = new List<FieldModel>();
-            
-            // no other attribute on the entire struct really
-            // matters here atm
+
             if (attribute.AttributeClass?.ToDisplayString() != "RelinkSDK.Attributes.BaseAttribute")
             {
                 continue;
@@ -50,31 +48,8 @@ internal class BindingGenerator : IIncrementalGenerator
                 continue;
             }
 
-            foreach (var fieldToInherit in baseType.GetMembers().OfType<IFieldSymbol>())
-            {
-                // declared/generated statics & constants stay on their
-                // defined class
-                if (fieldToInherit.IsStatic || fieldToInherit.IsConst)
-                {
-                    continue;
-                }
-                
-                var fieldOffset = fieldToInherit.GetAttributes()
-                    .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.FieldOffsetAttribute")
-                    ?.ConstructorArguments[0].Value as int?;
+            CollectBases(baseType, baseOffset, inheritedFields);
 
-                if (fieldOffset == null)
-                {
-                    continue;
-                }
-                
-                inheritedFields.Add(new FieldModel(
-                    fieldToInherit.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    fieldToInherit.Name,
-                    baseOffset + (uint)fieldOffset.Value
-                ));
-            }
-            
             inheritors.Add(
                 new BaseModel(
                     baseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -135,6 +110,60 @@ internal class BindingGenerator : IIncrementalGenerator
             new EquatableArray<GlobalModel>(globals.ToArray()),
             new EquatableArray<MethodModel>(methods.ToArray())
         );
+    }
+
+    private void CollectBases(INamedTypeSymbol type, uint offset, List<FieldModel> inheritedFields)
+    {
+        foreach (var fieldToInherit in type.GetMembers().OfType<IFieldSymbol>())
+        {
+            // declared/generated statics & constants stay on their
+            // defined class
+            if (fieldToInherit.IsStatic || fieldToInherit.IsConst)
+            {
+                continue;
+            }
+
+            var fieldOffset = fieldToInherit.GetAttributes()
+                .FirstOrDefault(a =>
+                    a.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.FieldOffsetAttribute")
+                ?.ConstructorArguments[0].Value as int?;
+
+            if (fieldOffset == null)
+            {
+                continue;
+            }
+
+            inheritedFields.Add(new FieldModel(
+                fieldToInherit.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                fieldToInherit.Name,
+                offset + (uint)fieldOffset.Value
+            ));
+        }
+            
+        // GetMembers() can only see base fields that already exist pre-generation
+        // but deeper level nested ones have to be recursively inherited
+        foreach (var attribute in type.GetAttributes())
+        {
+            if (attribute.AttributeClass?.ToDisplayString() != "RelinkSDK.Attributes.BaseAttribute")
+            {
+                continue;
+            }
+
+            if (attribute.ConstructorArguments[0].Value is not INamedTypeSymbol baseType
+                || attribute.ConstructorArguments[1].Value is not uint baseOffset)
+            {
+                continue;
+            }
+
+            // the embedded field itself, e.g. ExEmStatus.@ExStatus
+            inheritedFields.Add(new FieldModel(
+                baseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                baseType.Name,
+                offset + baseOffset
+            ));
+
+            CollectBases(baseType, offset + baseOffset, inheritedFields);
+        }
     }
     
     private string Emit(BindingModel model)
