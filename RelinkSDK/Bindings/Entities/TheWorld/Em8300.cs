@@ -7,7 +7,7 @@ namespace RelinkSDK.Bindings.Entities.TheWorld;
 /// Enemy class for The World
 /// </summary>
 [Binding]
-[Base(typeof(EmBehaviorBase))]
+[Base(typeof(EmBossBase))]
 public unsafe partial struct Em8300
 {
     [FieldOffset(0x270C)] public uint CurrentMode;
