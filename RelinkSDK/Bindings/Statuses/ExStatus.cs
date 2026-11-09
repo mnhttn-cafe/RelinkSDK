@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 using RelinkSDK.Standard;
+using RelinkSDK.Statuses;
 
 namespace RelinkSDK.Bindings;
 
@@ -21,7 +22,7 @@ public unsafe partial struct ExStatus
         int unknownParameter, bool clearProtected, bool unknownC, byte* paramsBegin, byte* paramsEnd, bool ownerOnly,
         bool createIfMissing);
     
-    public StatusBase* FindStatus(int id)
+    public StatusBase* FindStatus(StatusId id)
     {
         foreach (nint status in Statuses.AsSpan())
         {
@@ -32,5 +33,5 @@ public unsafe partial struct ExStatus
         return null;
     }
 
-    public bool HasStatus(int id) => FindStatus(id) != null;
+    public bool HasStatus(StatusId id) => FindStatus(id) != null;
 }
