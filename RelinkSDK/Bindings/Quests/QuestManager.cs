@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
 namespace RelinkSDK.Bindings.Quests;
@@ -5,6 +6,8 @@ namespace RelinkSDK.Bindings.Quests;
 [Binding]
 public unsafe partial struct QuestManager
 {
+    [FieldOffset(0x210)] public ReceptionQuestFlowBase* Flow;
+
     [RelativeVirtualAddress(0x7C53D30)]
     public static partial QuestManager* Instance { get; }
 

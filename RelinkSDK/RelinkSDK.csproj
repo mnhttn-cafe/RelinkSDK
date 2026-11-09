@@ -15,4 +15,8 @@
         <ProjectReference Include="../RelinkSDK.Generator/RelinkSDK.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Bindings\Quests\Flows\" />
+    </ItemGroup>
+
 </Project>

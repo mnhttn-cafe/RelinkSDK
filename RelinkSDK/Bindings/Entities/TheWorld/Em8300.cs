@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings;
+namespace RelinkSDK.Bindings.Enemies.TheWorld;
 
 /// <summary>
-/// The World
+/// Enemy class for The World
 /// </summary>
 [Binding]
 [Base(typeof(EmBehaviorBase))]

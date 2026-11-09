@@ -5,4 +5,5 @@ internal sealed record GlobalModel(
     string Type,
     uint Address,
     bool HasSetter,
-    bool ReturnsByReference);
+    bool ReturnsByReference,
+    int? Length);
