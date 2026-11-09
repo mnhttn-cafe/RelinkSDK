@@ -1,6 +1,6 @@
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings.Enemies.Maglielle;
+namespace RelinkSDK.Bindings.Entities.Maglielle;
 
 /// <summary>
 /// Enemy class for Maglielle

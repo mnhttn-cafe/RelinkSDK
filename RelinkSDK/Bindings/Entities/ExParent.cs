@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings;
+namespace RelinkSDK.Bindings.Entities;
 
 [Binding]
 public unsafe partial struct ExParent

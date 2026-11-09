@@ -1,6 +1,6 @@
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings.Enemies.Gallanza;
+namespace RelinkSDK.Bindings.Entities.Gallanza;
 
 [Binding]
 [Base(typeof(EmBehaviorBase))]

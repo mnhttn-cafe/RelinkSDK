@@ -1,4 +1,5 @@
 using RelinkSDK.Attributes;
+using RelinkSDK.Bindings.Entities;
 using RelinkSDK.Bindings.Players;
 
 namespace RelinkSDK.Bindings;

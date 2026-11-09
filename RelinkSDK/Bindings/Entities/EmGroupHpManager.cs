@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 using RelinkSDK.Standard;
 
-namespace RelinkSDK.Bindings;
+namespace RelinkSDK.Bindings.Entities;
 
 [Binding]
 public unsafe partial struct EmGroupHpManager

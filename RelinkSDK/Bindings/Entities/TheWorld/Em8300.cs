@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings.Enemies.TheWorld;
+namespace RelinkSDK.Bindings.Entities.TheWorld;
 
 /// <summary>
 /// Enemy class for The World

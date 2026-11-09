@@ -1,8 +1,9 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
+using RelinkSDK.Bindings.Entities;
 using RelinkSDK.Statuses;
 
-namespace RelinkSDK.Bindings;
+namespace RelinkSDK.Bindings.Statuses;
 
 [Binding]
 public unsafe partial struct StatusBase

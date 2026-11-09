@@ -13,5 +13,5 @@ namespace RelinkSDK.Bindings.Unknown;
 [StructLayout(LayoutKind.Explicit)]
 public unsafe struct UnknownA
 {
-    [FieldOffset(0x18)] public Entity* Entity;
+    [FieldOffset(0x18)] public Entities.Entity* Entity;
 }

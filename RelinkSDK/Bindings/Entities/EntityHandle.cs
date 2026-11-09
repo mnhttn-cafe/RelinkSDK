@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace RelinkSDK.Bindings;
+namespace RelinkSDK.Bindings.Entities;
 
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct EntityHandle

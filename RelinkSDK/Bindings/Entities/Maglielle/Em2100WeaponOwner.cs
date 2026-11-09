@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
-namespace RelinkSDK.Bindings.Enemies.Maglielle;
+namespace RelinkSDK.Bindings.Entities.Maglielle;
 
 [Binding]
 public unsafe partial struct Em2100WeaponOwner
