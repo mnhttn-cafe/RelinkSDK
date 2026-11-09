@@ -20,4 +20,17 @@ public unsafe partial struct ExStatus
     public static partial void BroadcastStatus(void* owner, Entity* source, int id, float duration, int sourceTag,
         int unknownParameter, bool clearProtected, bool unknownC, byte* paramsBegin, byte* paramsEnd, bool ownerOnly,
         bool createIfMissing);
+    
+    public StatusBase* FindStatus(int id)
+    {
+        foreach (nint status in Statuses.AsSpan())
+        {
+            var s = (StatusBase*)status;
+            if (s != null && s->Id == id) return s;
+        }
+        
+        return null;
+    }
+
+    public bool HasStatus(int id) => FindStatus(id) != null;
 }

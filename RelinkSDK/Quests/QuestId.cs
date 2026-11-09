@@ -3,7 +3,7 @@ namespace RelinkSDK.Quests;
 /// <summary>
 /// All the quest IDs for Granblue Fantasy Relink
 /// </summary>
-public enum QuestIds : uint
+public enum QuestId : uint
 {
     // PROUD QUESTS
     
