@@ -8,7 +8,7 @@ public abstract class Table<T> where T : Row, new()
     private readonly byte[] _bytes;
     private long _rowCount;
     
-    public abstract string Name { get; }
+    public abstract string Path { get; }
     public abstract long RowSize { get; }
     
     public List<T> Rows { get; private set; }
