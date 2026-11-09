@@ -69,12 +69,31 @@ internal class BindingGenerator : IIncrementalGenerator
             if (attribute == null || !property.IsStatic)
                 continue;
 
+            var length = property.GetAttributes().FirstOrDefault(a =>
+                a.AttributeClass?.ToDisplayString() == "RelinkSDK.Attributes.ArrayLengthAttribute");
+
             globals.Add(new GlobalModel(
                 property.Name,
                 property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 attribute.ConstructorArguments[0].Value is uint address ? address : 0,
                 property.SetMethod != null,
-                property.ReturnsByRef));
+                property.ReturnsByRef,
+                length?.ConstructorArguments[0].Value as int?));
+        }
+
+        var ownNames = new HashSet<string>(symbol.GetMembers().Select(m => m.Name));
+        var nameCounts = inheritors
+            .SelectMany(b => b.Fields.Select(f => f.Name).Append(b.Name))
+            .GroupBy(name => name)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        for (int i = 0; i < inheritors.Count; i++)
+        {
+            var kept = inheritors[i].Fields
+                .Where(f => nameCounts[f.Name] == 1 && !ownNames.Contains(f.Name))
+                .ToArray();
+
+            inheritors[i] = inheritors[i] with { Fields = new EquatableArray<FieldModel>(kept) };
         }
 
         foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>())
@@ -209,7 +228,16 @@ internal class BindingGenerator : IIncrementalGenerator
         code.AppendLine($"public const nint {model.Name}_RVA = 0x{model.Address:X};");
         code.AppendLine();
 
-        if (model.ReturnsByReference)
+        if (model.Length != null)
+        {
+            code.AppendLine($"public const int {model.Name}_LENGTH = {model.Length};");
+            code.AppendLine();
+            code.AppendLine($"public static partial {model.Type} {model.Name}");
+            code.AppendLine("{");
+            code.AppendLine($"    get => ({model.Type})(global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA);");
+            code.AppendLine("}");
+        }
+        else if (model.ReturnsByReference)
         {
 
             code.AppendLine($"public static partial ref {model.Type} {model.Name}");
