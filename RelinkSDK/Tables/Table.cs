@@ -1,9 +1,11 @@
+using System.Collections;
+
 namespace RelinkSDK.Tables;
 
 /// <summary>
 /// Managed representation of .tbl files in Granblue Fantasy Relink
 /// </summary>
-public abstract class Table<T> where T : Row, new()
+public abstract class Table<T> : IEnumerable<T> where T : Row, new()
 {
     private readonly byte[] _bytes;
     private long _rowCount;
@@ -12,6 +14,7 @@ public abstract class Table<T> where T : Row, new()
     public abstract long RowSize { get; }
     
     public List<T> Rows { get; private set; }
+    public T this[int i] => Rows[i];
     
     public Table(byte[] bytes)
     {
@@ -78,5 +81,15 @@ public abstract class Table<T> where T : Row, new()
 
             yield return row;
         }
+    }
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        return Rows.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
     }
 }
