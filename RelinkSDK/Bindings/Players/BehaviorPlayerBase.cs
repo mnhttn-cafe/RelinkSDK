@@ -4,8 +4,7 @@ using RelinkSDK.Attributes;
 namespace RelinkSDK.Bindings.Players;
 
 [Binding]
-[Base(typeof(Behavior), 0)]
-[Base(typeof(Entities.ExHp), 0x150)]
+[Base(typeof(BehaviorAppBase))]
 [Base(typeof(Statuses.ExStatus), 0xAE0)]
 [Base(typeof(Network.ExNetwork), 0x4350)]
 public unsafe partial struct BehaviorPlayerBase

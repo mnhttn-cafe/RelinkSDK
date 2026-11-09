@@ -4,8 +4,7 @@ using RelinkSDK.Attributes;
 namespace RelinkSDK.Bindings.Entities;
 
 [Binding]
-[Base(typeof(Behavior), 0)]
-[Base(typeof(ExHp), 0x150)]
+[Base(typeof(BehaviorAppBase))]
 [Base(typeof(Network.ExNetwork), 0x9E0)]
 [Base(typeof(ExEmLinkAttack), 0xAA0)]
 [Base(typeof(Statuses.ExEmStatus), 0xCF8)]
