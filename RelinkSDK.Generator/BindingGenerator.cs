@@ -32,6 +32,7 @@ internal class BindingGenerator : IIncrementalGenerator
         var methods = new List<MethodModel>();
         var inheritors = new List<BaseModel>();
         var globals = new List<GlobalModel>();
+        var inheritedMethods = new List<MethodModel>();
 
         foreach (var attribute in symbol.GetAttributes())
         {
@@ -48,7 +49,7 @@ internal class BindingGenerator : IIncrementalGenerator
                 continue;
             }
 
-            CollectBases(baseType, baseOffset, inheritedFields);
+            CollectBases(baseType, baseOffset, inheritedFields, inheritedMethods);
 
             inheritors.Add(
                 new BaseModel(
@@ -98,28 +99,23 @@ internal class BindingGenerator : IIncrementalGenerator
 
         foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>())
         {
-            var attribute = method.GetAttributes().FirstOrDefault(a =>
-                a.AttributeClass?.ToDisplayString() == "RelinkSDK.Attributes.RelativeVirtualAddressAttribute");
+            var model = ToMethodModel(method, false);
 
-            if (attribute == null)
+            if (model != null)
+            {
+                methods.Add(model);
+            }
+        }
+
+        var fieldNames = new HashSet<string>(inheritors.SelectMany(b => b.Fields.Select(f => f.Name).Append(b.Name)));
+        var methodNames = new HashSet<string>();
+
+        foreach (var method in inheritedMethods)
+        {
+            if (ownNames.Contains(method.Name) || fieldNames.Contains(method.Name) || !methodNames.Add(method.Name))
                 continue;
 
-            var parameters =
-                method.Parameters.Select(p =>
-                {
-                    return (
-                        p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                        p.Name
-                    );
-                });
-            
-            methods.Add(new MethodModel(
-                method.Name,
-                method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                method.IsStatic,
-                (uint?)attribute.ConstructorArguments[0].Value ?? 0x0,
-                new EquatableArray<(string Type, string Name)>(parameters.ToArray())
-            ));
+            methods.Add(method);
         }
 
         return new BindingModel(
@@ -131,8 +127,48 @@ internal class BindingGenerator : IIncrementalGenerator
         );
     }
 
-    private void CollectBases(INamedTypeSymbol type, uint offset, List<FieldModel> inheritedFields)
+    private MethodModel? ToMethodModel(IMethodSymbol method, bool inherited)
     {
+        var attributes = method.GetAttributes();
+        var address = attributes.FirstOrDefault(a =>
+            a.AttributeClass?.ToDisplayString() == "RelinkSDK.Attributes.RelativeVirtualAddressAttribute");
+        var slot = attributes.FirstOrDefault(a =>
+            a.AttributeClass?.ToDisplayString() == "RelinkSDK.Attributes.VirtualFunctionAttribute");
+
+        if (address == null && slot == null)
+        {
+            return null;
+        }
+
+        var parameters = method.Parameters.Select(p => (
+            p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            p.Name
+        ));
+
+        return new MethodModel(
+            method.Name,
+            method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            method.IsStatic,
+            address?.ConstructorArguments[0].Value as uint? ?? 0x0,
+            slot?.ConstructorArguments[0].Value as int?,
+            inherited,
+            new EquatableArray<(string Type, string Name)>(parameters.ToArray())
+        );
+    }
+
+    private void CollectBases(INamedTypeSymbol type, uint offset, List<FieldModel> inheritedFields, List<MethodModel> inheritedMethods)
+    {
+        if (offset == 0)
+        {
+            foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
+            {
+                var model = ToMethodModel(method, true);
+
+                if (model is { Slot: not null, IsStatic: false })
+                    inheritedMethods.Add(model);
+            }
+        }
+
         foreach (var fieldToInherit in type.GetMembers().OfType<IFieldSymbol>())
         {
             // declared/generated statics & constants stay on their
@@ -181,7 +217,7 @@ internal class BindingGenerator : IIncrementalGenerator
                 offset + baseOffset
             ));
 
-            CollectBases(baseType, offset + baseOffset, inheritedFields);
+            CollectBases(baseType, offset + baseOffset, inheritedFields, inheritedMethods);
         }
     }
     
@@ -279,7 +315,9 @@ internal class BindingGenerator : IIncrementalGenerator
         var declaration = new List<string>();
         
         code.AppendLine();
-        code.AppendLine($"public const nint {model.Name}_RVA = 0x{model.Address:X};");
+        code.AppendLine(model.Slot != null
+            ? $"public const int {model.Name}_SLOT = {model.Slot};"
+            : $"public const nint {model.Name}_RVA = 0x{model.Address:X};");
 
         if (!model.IsStatic)
         {
@@ -306,15 +344,20 @@ internal class BindingGenerator : IIncrementalGenerator
         bool returnsBool = model.ReturnType == "bool";
         types.Add(returnsBool ? "byte" : model.ReturnType);
 
-        var call = $"((delegate* unmanaged<{string.Join(", ", types)}>)(global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA))({string.Join(", ", parameters)})";
+        var target = model.Slot != null
+            ? $"(*(nint**)Unsafe.AsPointer(ref this))[{model.Name}_SLOT]"
+            : $"global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA";
+
+        var call = $"((delegate* unmanaged<{string.Join(", ", types)}>)({target}))({string.Join(", ", parameters)})";
         if (returnsBool)
         {
             call += " != 0";
         }
 
         var modifiers = model.IsStatic ? "public static" : "public";
+        var partial = model.IsInherited ? "" : " partial";
         code.AppendLine();
-        code.AppendLine($"{modifiers} partial {model.ReturnType} {model.Name}({string.Join(", ", declaration)})");
+        code.AppendLine($"{modifiers}{partial} {model.ReturnType} {model.Name}({string.Join(", ", declaration)})");
         code.AppendLine($"    => {call};");
     }
 
@@ -350,7 +393,11 @@ internal class BindingGenerator : IIncrementalGenerator
         }
         code.AppendLine($"public delegate {model.ReturnType} {model.Name}Fn({string.Join(", ", delegateParameters)});");
         code.AppendLine();
+        var address = model.Slot != null
+            ? $"global::RelinkSDK.Game.Instance.VirtualFunction(\"{structName}\", {model.Name}_SLOT)"
+            : $"global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA";
+
         code.AppendLine($"public static IHook<{model.Name}Fn> Hook{model.Name}(IReloadedHooks hooks, {model.Name}Fn handler)");
-        code.AppendLine($"    => hooks.CreateHook<{model.Name}Fn>(handler, global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA).Activate();");
+        code.AppendLine($"    => hooks.CreateHook<{model.Name}Fn>(handler, {address}).Activate();");
     }
 }

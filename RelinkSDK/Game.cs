@@ -25,6 +25,7 @@ public class Game
         }
     }
 
+    private readonly Dictionary<string, nint> _vtables = new();
     private ProcessModule _module;
     private nint _baseAddress;
 
@@ -58,6 +59,55 @@ public class Game
     }
 
     public nint AddressFor(nint rva) => _baseAddress + rva;
+    public unsafe nint VirtualFunction(string className, int slot) => ((nint*)VirtualTable(className))[slot];
+
+    public unsafe nint VirtualTable(string className)
+    {
+        if (_vtables.TryGetValue(className, out nint cached))
+        {
+            return cached;
+        }
+
+        var image = new ReadOnlySpan<byte>((void*)_baseAddress, _module.ModuleMemorySize);
+
+        int name = image.IndexOf(System.Text.Encoding.ASCII.GetBytes($".?AV{className}@@\0"));
+        if (name < 0)
+        {
+            throw new KeyNotFoundException($"No type descriptor for {className}");
+        }
+
+        uint descriptor = (uint)(name - 0x10);
+        int locator = -1;
+
+        for (int at = 0, found; (found = image[at..].IndexOf(BitConverter.GetBytes(descriptor))) >= 0; at += found + 4)
+        {
+            int candidate = at + found - 0xC;
+
+            if (candidate >= 0
+                && BitConverter.ToUInt32(image[candidate..]) == 1
+                && BitConverter.ToUInt32(image[(candidate + 0x4)..]) == 0
+                && BitConverter.ToUInt32(image[(candidate + 0x14)..]) == (uint)candidate)
+            {
+                locator = candidate;
+                break;
+            }
+        }
+
+        if (locator < 0)
+        {
+            throw new KeyNotFoundException($"No complete object locator for {className}");
+        }
+
+        int pointer = image.IndexOf(BitConverter.GetBytes((long)(_baseAddress + locator)));
+        if (pointer < 0)
+        {
+            throw new KeyNotFoundException($"No virtual table for {className}");
+        }
+
+        nint vtable = _baseAddress + pointer + 8;
+        _vtables[className] = vtable;
+        return vtable;
+    }
 
     /// <summary>
     /// Whether <paramref name="address" /> is a valid address inside the game.
