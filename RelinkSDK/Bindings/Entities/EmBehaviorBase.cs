@@ -1,10 +1,10 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
 namespace RelinkSDK.Bindings;
 
 [Binding]
+[Base(typeof(Behavior), 0)]
 [Base(typeof(ExHp), 0x150)]
 [Base(typeof(ExNetwork), 0x9E0)]
 [Base(typeof(ExEmLinkAttack), 0xAA0)]
@@ -21,6 +21,4 @@ public unsafe partial struct EmBehaviorBase
 
     [RelativeVirtualAddress(0xB40CF0)]
     public static partial void MakeStatusKey(uint unknown4A, uint* key, int enemyParam);
-
-    public Entity* GetEntity() => *(Entity**)(*(nint*)((byte*)Unsafe.AsPointer(ref this) + 0x28) + 0x18);
 }
