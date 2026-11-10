@@ -37,4 +37,6 @@ public unsafe struct Vector<T> where T : unmanaged
 
         return new Span<T>(_first, (int)Size());
     }
+    
+    public Span<T>.Enumerator GetEnumerator() => AsSpan().GetEnumerator();
 }
