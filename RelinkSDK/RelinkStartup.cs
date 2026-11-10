@@ -1,6 +1,7 @@
 using Reloaded.Hooks.ReloadedII.Interfaces;
 using Reloaded.Mod.Interfaces;
 using Reloaded.Mod.Interfaces.Internal;
+using RelinkSDK.Bindings;
 using RelinkSDK.Configuration;
 using RelinkSDK.Entities;
 
@@ -11,6 +12,8 @@ public class RelinkStartup<TMod, TConfig> : IMod
     where TConfig : Configurable<TConfig>, new()
 {
     private TMod? _mod;
+    private Reloaded.Hooks.Definitions.IHook<AppMainLoop.StepFn>? _step;
+    private bool _updateFailed;
 
     public void StartEx(IModLoaderV1 loaderApi, IModConfigV1 modConfigApi)
     {
@@ -45,8 +48,9 @@ public class RelinkStartup<TMod, TConfig> : IMod
         };
 
         _mod.Entities = new EntityManager(hooks);
-
         _mod.Start();
+
+        HandleStartup();
     }
 
     private void OnConfigurationUpdated(IUpdatableConfigurable configurable)
@@ -75,4 +79,36 @@ public class RelinkStartup<TMod, TConfig> : IMod
     public bool CanUnload() => false;
     public bool CanSuspend() => false;
     public Action Disposing => () => { };
+
+    private unsafe void HandleStartup()
+    {
+        var method = typeof(TMod).GetMethod(nameof(RelinkMod<TConfig>.Update), Type.EmptyTypes)!;
+
+        if (method.GetBaseDefinition().DeclaringType
+            != method.DeclaringType)
+        {
+            _step = AppMainLoop.HookStep(_mod!.Hooks, OnStep);
+        }
+    }
+
+    private unsafe void OnStep(AppMainLoop* self)
+    {
+        _step!.OriginalFunction(self);
+
+        if (_updateFailed)
+        {
+            return;
+        }
+
+        try
+        {
+            _mod!.Update();
+        }
+        catch (Exception e)
+        {
+            // better safe than sorry
+            _updateFailed = true;
+            _mod!.Log($"Update threw an exception, disabling it: {e}");
+        }
+    }
 }

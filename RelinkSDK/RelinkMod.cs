@@ -17,6 +17,11 @@ public abstract class RelinkMod<TConfig> where TConfig : Configurable<TConfig>, 
 
     public abstract void Start();
 
+    public virtual void Update()
+    {
+        
+    }
+
     public virtual void ConfigurationUpdated(TConfig config)
     {
     }
