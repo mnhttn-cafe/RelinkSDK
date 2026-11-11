@@ -73,7 +73,7 @@ public class Game
         int name = image.IndexOf(System.Text.Encoding.ASCII.GetBytes($".?AV{className}@@\0"));
         if (name < 0)
         {
-            throw new KeyNotFoundException($"No type descriptor for {className}");
+            name = FindScopedTypeName(image, className);
         }
 
         uint descriptor = (uint)(name - 0x10);
@@ -108,6 +108,46 @@ public class Game
         _vtables[className] = vtable;
         return vtable;
     }
+
+    private static int FindScopedTypeName(ReadOnlySpan<byte> image, string className)
+    {
+        byte[] prefix = System.Text.Encoding.ASCII.GetBytes($".?AV{className}@");
+        var names = new List<string>();
+        int match = -1;
+
+        for (int at = 0, found; (found = image[at..].IndexOf(prefix)) >= 0; at += found + prefix.Length)
+        {
+            int start = at + found;
+            int end = start + prefix.Length;
+
+            while (end < image.Length && IsNameChar(image[end]))
+            {
+                end++;
+            }
+
+            if (end >= image.Length || image[end] != 0 || image[end - 1] != '@' || image[end - 2] != '@')
+            {
+                continue;
+            }
+
+            match = start;
+            names.Add(System.Text.Encoding.ASCII.GetString(image[(start + 4)..(end - 2)]));
+        }
+
+        if (names.Count == 0)
+        {
+            throw new KeyNotFoundException($"No type descriptor for {className}");
+        }
+
+        if (names.Count > 1)
+        {
+            throw new KeyNotFoundException($"{className} is ambiguous, use one of: {string.Join(", ", names)}");
+        }
+
+        return match;
+    }
+
+    private static bool IsNameChar(byte c) => char.IsAsciiLetterOrDigit((char)c) || c == '_' || c == '@';
 
     /// <summary>
     /// Whether <paramref name="address" /> is a valid address inside the game.
