@@ -2,6 +2,7 @@ using Reloaded.Hooks.ReloadedII.Interfaces;
 using Reloaded.Mod.Interfaces;
 using RelinkSDK.Configuration;
 using RelinkSDK.Entities;
+using RelinkSDK.Network;
 
 namespace RelinkSDK;
 
@@ -14,6 +15,7 @@ public abstract class RelinkMod<TConfig> where TConfig : Configurable<TConfig>, 
     public TConfig Config { get; internal set; } = null!;
     
     public EntityManager Entities { get; internal set; } = null!;
+    public NetworkManager Network { get; internal set; } = null!;
 
     public abstract void Start();
 

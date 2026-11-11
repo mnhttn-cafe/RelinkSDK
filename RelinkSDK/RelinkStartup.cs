@@ -4,6 +4,7 @@ using Reloaded.Mod.Interfaces.Internal;
 using RelinkSDK.Bindings;
 using RelinkSDK.Configuration;
 using RelinkSDK.Entities;
+using RelinkSDK.Network;
 
 namespace RelinkSDK;
 
@@ -48,6 +49,7 @@ public class RelinkStartup<TMod, TConfig> : IMod
         };
 
         _mod.Entities = new EntityManager(hooks);
+        _mod.Network = new NetworkManager();
         _mod.Start();
 
         HandleStartup();
