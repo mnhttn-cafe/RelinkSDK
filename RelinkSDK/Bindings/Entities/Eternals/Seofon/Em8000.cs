@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using RelinkSDK.Attributes;
 
 namespace RelinkSDK.Bindings.Entities.Eternals.Seofon;
@@ -7,4 +8,5 @@ namespace RelinkSDK.Bindings.Entities.Eternals.Seofon;
 [Base(typeof(ExEmGroupHp), 0x2610)]
 public unsafe partial struct Em8000
 {
+    [FieldOffset(0x1598)] public Em8000Param* Param;
 }

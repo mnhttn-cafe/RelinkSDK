@@ -10,6 +10,7 @@ namespace RelinkSDK.Bindings.Entities;
 [Base(typeof(Statuses.ExEmStatus), 0xCF8)]
 public unsafe partial struct EmBehaviorBase
 {
+    [FieldOffset(0x1598)] public EnemyParameterInfo* Param;
     [FieldOffset(0x15A8)] public ulong BaseHp;
     [FieldOffset(0x15B0)] public uint BaseAttack;
     [FieldOffset(0x15D0)] public uint Unknown15D0;
