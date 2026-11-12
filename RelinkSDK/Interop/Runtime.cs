@@ -25,7 +25,7 @@ public static unsafe class Runtime
             if (name.SequenceEqual(target))
             {
                 return (T*)(root + descriptor[2]);
-            }a
+            }
         }
 
         return null;
