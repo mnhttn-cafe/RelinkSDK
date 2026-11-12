@@ -25,7 +25,7 @@ public class Game
         }
     }
 
-    private readonly Dictionary<string, nint> _vtables = new();
+    private readonly Dictionary<(string, uint), nint> _vtables = new();
     private ProcessModule _module;
     private nint _baseAddress;
 
@@ -59,11 +59,11 @@ public class Game
     }
 
     public nint AddressFor(nint rva) => _baseAddress + rva;
-    public unsafe nint VirtualFunction(string className, int slot) => ((nint*)VirtualTable(className))[slot];
+    public unsafe nint VirtualFunction(string className, int slot, uint offset = 0) => ((nint*)VirtualTable(className, offset))[slot];
 
-    public unsafe nint VirtualTable(string className)
+    public unsafe nint VirtualTable(string className, uint offset = 0)
     {
-        if (_vtables.TryGetValue(className, out nint cached))
+        if (_vtables.TryGetValue((className, offset), out nint cached))
         {
             return cached;
         }
@@ -85,7 +85,7 @@ public class Game
 
             if (candidate >= 0
                 && BitConverter.ToUInt32(image[candidate..]) == 1
-                && BitConverter.ToUInt32(image[(candidate + 0x4)..]) == 0
+                && BitConverter.ToUInt32(image[(candidate + 0x4)..]) == offset
                 && BitConverter.ToUInt32(image[(candidate + 0x14)..]) == (uint)candidate)
             {
                 locator = candidate;
@@ -95,7 +95,7 @@ public class Game
 
         if (locator < 0)
         {
-            throw new KeyNotFoundException($"No complete object locator for {className}");
+            throw new KeyNotFoundException($"No complete object locator for {className} at 0x{offset:X}");
         }
 
         int pointer = image.IndexOf(BitConverter.GetBytes((long)(_baseAddress + locator)));
@@ -105,7 +105,7 @@ public class Game
         }
 
         nint vtable = _baseAddress + pointer + 8;
-        _vtables[className] = vtable;
+        _vtables[(className, offset)] = vtable;
         return vtable;
     }
 

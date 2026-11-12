@@ -11,6 +11,11 @@ public enum QuestId : uint
     /// The Wolf and The Veil -- Maglielle & Gallanza
     /// </summary>
     TheWolfAndTheVeil = 0x407312,
+
+    /// <summary>
+    /// Eternal Pride -- Seofon & Tweyen
+    /// </summary>
+    EternalPride = 0x40A330,
     
     // DEFY INFINITY QUESTS
     

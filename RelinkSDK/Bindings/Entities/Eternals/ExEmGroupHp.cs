@@ -10,6 +10,9 @@ public unsafe partial struct ExEmGroupHp
     [FieldOffset(0x78)] public EmGroupHpManager* Manager;
     [FieldOffset(0x88)] public uint Share;
 
+    [RelativeVirtualAddress(0x3AB8310)]
+    public partial void SetShare(ulong hp);
+
     [RelativeVirtualAddress(0x3AB7850)]
     public partial void Damage(uint damage, uint flag);
 }

@@ -152,21 +152,30 @@ internal class BindingGenerator : IIncrementalGenerator
             address?.ConstructorArguments[0].Value as uint? ?? 0x0,
             slot?.ConstructorArguments[0].Value as int?,
             inherited,
+            0,
+            "",
             new EquatableArray<(string Type, string Name)>(parameters.ToArray())
         );
     }
 
     private void CollectBases(INamedTypeSymbol type, uint offset, List<FieldModel> inheritedFields, List<MethodModel> inheritedMethods)
     {
-        if (offset == 0)
+        foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
         {
-            foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
-            {
-                var model = ToMethodModel(method, true);
+            var model = ToMethodModel(method, true);
 
-                if (model is { Slot: not null, IsStatic: false })
-                    inheritedMethods.Add(model);
-            }
+            if (model is not { Slot: not null, IsStatic: false })
+                continue;
+
+            // a base past offset 0 has its own vtable inside the object,
+            // so the call has to go through that one with this moved there
+            inheritedMethods.Add(offset == 0
+                ? model
+                : model with
+                {
+                    BaseOffset = offset,
+                    BaseType = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                });
         }
 
         foreach (var fieldToInherit in type.GetMembers().OfType<IFieldSymbol>())
@@ -319,10 +328,15 @@ internal class BindingGenerator : IIncrementalGenerator
             ? $"public const int {model.Name}_SLOT = {model.Slot};"
             : $"public const nint {model.Name}_RVA = 0x{model.Address:X};");
 
+        var selfType = model.BaseOffset == 0 ? structName : model.BaseType;
+        var self = model.BaseOffset == 0
+            ? $"({structName}*)Unsafe.AsPointer(ref this)"
+            : $"({selfType}*)((byte*)Unsafe.AsPointer(ref this) + 0x{model.BaseOffset:X})";
+
         if (!model.IsStatic)
         {
-            types.Add($"{structName}*");
-            parameters.Add($"({structName}*)Unsafe.AsPointer(ref this)");
+            types.Add($"{selfType}*");
+            parameters.Add(self);
         }
 
         foreach (var (type, name) in model.Parameters)
@@ -345,7 +359,7 @@ internal class BindingGenerator : IIncrementalGenerator
         types.Add(returnsBool ? "byte" : model.ReturnType);
 
         var target = model.Slot != null
-            ? $"(*(nint**)Unsafe.AsPointer(ref this))[{model.Name}_SLOT]"
+            ? $"(*(nint**){self})[{model.Name}_SLOT]"
             : $"global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA";
 
         var call = $"((delegate* unmanaged<{string.Join(", ", types)}>)({target}))({string.Join(", ", parameters)})";
@@ -367,7 +381,7 @@ internal class BindingGenerator : IIncrementalGenerator
 
         if (!model.IsStatic)
         {
-            delegateParameters.Add($"{structName}* self");
+            delegateParameters.Add($"{(model.BaseOffset == 0 ? structName : model.BaseType)}* self");
         }
         
         // managed delegate shits are marshalled
@@ -394,7 +408,7 @@ internal class BindingGenerator : IIncrementalGenerator
         code.AppendLine($"public delegate {model.ReturnType} {model.Name}Fn({string.Join(", ", delegateParameters)});");
         code.AppendLine();
         var address = model.Slot != null
-            ? $"global::RelinkSDK.Game.Instance.VirtualFunction(\"{structName}\", {model.Name}_SLOT)"
+            ? $"global::RelinkSDK.Game.Instance.VirtualFunction(\"{structName}\", {model.Name}_SLOT, 0x{model.BaseOffset:X})"
             : $"global::RelinkSDK.Game.Instance.BaseAddress + {model.Name}_RVA";
 
         code.AppendLine($"public static IHook<{model.Name}Fn> Hook{model.Name}(IReloadedHooks hooks, {model.Name}Fn handler)");

@@ -14,4 +14,7 @@ public unsafe partial struct ExHp
     
     [RelativeVirtualAddress(0x1F75EB0)]
     public partial void SetCurrentHp(ulong val);
+
+    [VirtualFunction(10)]
+    public partial void Damage(ulong damage, uint flag);
 }

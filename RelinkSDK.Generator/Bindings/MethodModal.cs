@@ -9,4 +9,6 @@ internal sealed record MethodModel(
     uint Address,
     int? Slot,
     bool IsInherited,
+    uint BaseOffset,
+    string BaseType,
     EquatableArray<(string Type, string Name)> Parameters);
